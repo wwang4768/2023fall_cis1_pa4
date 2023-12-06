@@ -1,6 +1,7 @@
 import numpy as np
 import numpy.linalg as la
 import calibration_library as cal
+import collections
 
 def find_closest_point(point, vertices, triangles):
     """
@@ -112,8 +113,83 @@ def transform_tip_positions(tip_positions, frame_transformation):
     return: transformed_tip_positions: Transformed array of points
 
     """
-    for i in range(np.shape(tip_positions.data)[1]):
+    # for i in range(np.shape(tip_positions.data)[1]):
 
-        tip_positions.data[:, i] = cal.setRegistration.apply_transformation_single_pt(tip_positions, frame_transformation)
+    #     tip_positions.data[:, i] = cal.setRegistration.apply_transformation_single_pt(tip_positions, frame_transformation)
 
-    return tip_positions
+    # return tip_positions
+    transformed_tip_pos = []
+    for i in range(len(tip_positions)):
+        registration = cal.setRegistration()
+        new = registration.apply_transformation_single_pt(tip_positions[i], frame_transformation)
+        transformed_tip_pos.append(new)
+    return transformed_tip_pos
+
+def findClosestPoints(vertices, triangles, startPoints):
+    """
+    Finds the registration transformation between a rigid reference body B and the bone using an iterative closest point finding algorithm.
+
+    :param vertices: Vertex coordinates of the mesh.
+    :param triangles: Indices of vertices for each mesh triangle.
+    :param startPoints: Positions of the rigid body's tip of rigid body A in reference B coordinates.
+
+    :type vertices: np.array of np.float64, shape (3, N)
+    :type triangles: np.array of np.float64, shape (3, M)
+    :type startPoints: pc.PointCloud
+
+    :return: Closest points and registration frame between the bone and the reference body B.
+    """
+    registrationFrame = np.identity(4) # initial transformation assumption
+    maxIterations = 20
+    previousError = collections.deque(maxlen=2) # deque of error
+    previousError.append(0)
+    registration = cal.setRegistration()
+
+
+    for iteration in range(maxIterations):
+        transformedPoints = transform_tip_positions(startPoints, registrationFrame)
+        #transformedPoints = cal.setRegistration.apply_transformation_single_pt(startPoints, registrationFrame)
+        allClosestPoints = []
+
+        for point in transformedPoints:
+            closestPoint = find_closest_point(point, vertices, triangles)
+            allClosestPoints.append(closestPoint)
+
+        delta_Frame = registration.calculate_3d_transformation(transformedPoints, np.array(allClosestPoints))
+        newFrame = np.matmul(delta_Frame, registrationFrame)
+
+        if hasConverged(1e-4, registrationFrame, newFrame, previousError):
+            return np.array(allClosestPoints), newFrame
+
+        registrationFrame = newFrame
+
+    return np.array(allClosestPoints), registrationFrame
+
+
+def hasConverged(tolerance, oldFrame, newFrame, errorHistory):
+    """
+    Determines if the frame transformation is within a specified tolerance.
+
+    :param tolerance: Tolerance threshold for sum of squared differences.
+    :param oldFrame: Previous frame transformation.
+    :param newFrame: Current frame transformation.
+    :param errorHistory: History of previous errors to assess convergence.
+
+    :type tolerance: float
+    :type oldFrame: 4x4 matrix
+    :type newFrame: 4x4 matrix
+    :type errorHistory: collections.deque
+
+    :return: Whether the difference is within the tolerance or not.
+    :rtype: bool
+    """
+    error = sum((oldFrame[:3, 3][i] - newFrame[:3, 3][i]) ** 2 +
+                sum((oldFrame[:3, :3][i][j] - newFrame[:3, :3][i][j]) ** 2 for j in range(3))
+                for i in range(3))
+
+    if error < tolerance or (errorHistory and abs(error - errorHistory[0]) < tolerance):
+        return True
+
+    errorHistory.append(error)
+    return False
+

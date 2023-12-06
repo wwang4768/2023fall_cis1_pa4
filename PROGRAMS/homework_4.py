@@ -7,15 +7,17 @@ import icp_library as icp
 
 def main(): 
     # User interface prompt that takes input from user
-    parser = argparse.ArgumentParser(description='homework_4 input')
-    parser.add_argument('choose_set', help='The alphabetical index of the data set')
-    parser.add_argument('input_type', help='The debug or unknown input data to process')
-    args = parser.parse_args()
+    # parser = argparse.ArgumentParser(description='homework_4 input')
+    # parser.add_argument('choose_set', help='The alphabetical index of the data set')
+    # parser.add_argument('input_type', help='The debug or unknown input data to process')
+    # args = parser.parse_args()
 
     # Read in input dataset
     script_directory = os.path.dirname(__file__)
     dirname = os.path.dirname(script_directory)
-    base_path = os.path.join(dirname, f'PROGRAMS\\2023_pa345_student_data\\PA4-{args.choose_set}-{args.input_type}') 
+    #base_path = os.path.join(dirname, f'PROGRAMS\\2023_pa345_student_data\\PA4-{args.choose_set}-{args.input_type}') 
+    choose_set = 'A'
+    base_path = os.path.join(dirname, f'PROGRAMS\\2023_pa345_student_data\\PA4-{choose_set}-Debug') 
     
     #Prolem4-BodyA.txt - 6 markers on Frame A and 1 tip 
     PA4_BodyA = os.path.join(dirname, f'PROGRAMS\\2023_pa345_student_data\\Problem4-BodyA.txt')
@@ -27,12 +29,14 @@ def main():
 
     #Problem4Mesh.sur - 1568 vertices and 3135 triangles (3 vertices index denoted as P Q R)
     # parse two data sets; for the second data set, keep first 3 datapoints
-    PA4_Mesh = os.path.join(dirname, f'PROGRAMS\\2023_pa345_student_data\\Problem4Mesh.sur')
+    PA4_Mesh = os.path.join(dirname, f'PROGRAMS\\2023_pa345_student_data\\Problem4MeshFile.sur')
     PA4_vertices, PA4_triangles  = parseMesh(PA4_Mesh, 1568)
 
     #SampleReadingsTest
     SampleReading = base_path + '-SampleReadingsTest.txt'
     SampleReading_point_cloud = parseData(SampleReading)
+
+    # update number of frames
     SampleReading_frames = parseFrame(SampleReading_point_cloud, 6+6+4) # 15 frames of 16 points, ignore last 4 for PA3
 
     registration = setRegistration()
@@ -45,6 +49,8 @@ def main():
     a_frames / b_frames = 15 frames * 6 points - 1 set 
     led_a / led_b = PA4_BodyA first 6 points 
     tip_a = PA4_Body last point
+
+    d_k = tip point
     """
     # return 15 tip_position_b (aka d_k points)
     a_frames_set = []
@@ -75,7 +81,7 @@ def main():
         # transpose the tip position - tip_pos is a list and doesn't have a shape
         tip_pos.append(two_d)
         
-    d_k = np.concatenate(tip_pos, axis=1)
+    d_k = np.concatenate(tip_pos, axis=1) # substitude d_k with s_k 
 
     """
     Step 2 - return 15 closest point to c_k points 
@@ -86,36 +92,62 @@ def main():
     """
     vertices_trans = np.transpose(PA4_vertices)
     triangles_trans = np.transpose(PA4_triangles)
+    d_k_formatted = []
     c_k = []
+
     for i in range(len(a_frames_set)):
-        pt = icp.find_closest_point(d_k[:, i], vertices_trans, triangles_trans)
-        two_d = pt[:, np.newaxis]
-        c_k.append(two_d)
-    closest_pt = np.concatenate(c_k, axis=1)
+        d_k_formatted.append(d_k[:,i])
+
+    d_k_formatted_array = np.array(d_k_formatted)
+    pt, transformation_matrix = icp.findClosestPoints(vertices_trans, triangles_trans, d_k_formatted)
+    
+    rows = len(d_k_formatted)
+    cols = 3
+    two_d_array = np.array(d_k_formatted).reshape((rows, cols))
+    
+    s_k = registration.apply_transformation(two_d_array, transformation_matrix)
+    # # specific for PA4 
+    # for i in range(len(a_frames_set)):
+    #     pt, transformation_matrix = icp.findClosestPoints(vertices_trans, triangles_trans, d_k[:, i])
+    #     two_d = pt[:, np.newaxis]
+    #     c_k.append(two_d)
+    # closest_pt = np.concatenate(c_k, axis=1)
+
+    #apply transformation matrix to d_k to calculate s_k
+
+    # for i in range(len(a_frames_set)):
+    #     pt = icp.find_closest_point(d_k[:, i], vertices_trans, triangles_trans)
+    #     two_d = pt[:, np.newaxis]
+    #     c_k.append(two_d)
+    # closest_pt = np.concatenate(c_k, axis=1)
     
     """
     Step 3 
-    put in returns from step 1 and step 2
+    put in returns from step 1 and step 2 (distance between s_k and c_k)
     return 15 distance 
     """
-    distance = icp.calc_difference(c_k, tip_pos)
+    # distance = icp.calc_difference(c_k, tip_pos)
+    distance = icp.calc_difference(s_k, tip_pos)
 
     # format Output
-    output_name = f'PA4-{args.choose_set}-{args.input_type}-Output.txt'
+    #output_name = f'PA4-{args.choose_set}-{args.input_type}-Output.txt'
+    output_name = f'PA4-{choose_set}-Debug-Output.txt'
 
     # Initialize the output list
     output = []
     for i in range(len(a_frames_set)):
         # Transpose the data
         dk = np.transpose(tip_pos[i])
-        ck = np.transpose(c_k[i])
+        #ck = np.transpose(c_k[i])
+        sk = np.transpose(s_k[i])
 
         # initialize a row with a single space, then extend with dk, another single space as a placeholder, and ck
         row = []
         row.append(" ") 
         row.extend(dk.ravel())
         row.append("    ")
-        row.extend(ck.ravel())
+        # row.extend(ck.ravel())
+        row.extend(sk.ravel())
 
         row.append(round(distance[i], 3))
         output.append(row)
@@ -124,7 +156,7 @@ def main():
 
     # Write to the file
     with open(output_name, "w") as file:
-        file.write(f'15 {output_name} 0\n')
+        file.write(f'200 {output_name} 0\n')
 
         for row in output:
             formatted_row = ' '.join(
