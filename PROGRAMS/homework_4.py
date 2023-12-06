@@ -16,7 +16,7 @@ def main():
     script_directory = os.path.dirname(__file__)
     dirname = os.path.dirname(script_directory)
     #base_path = os.path.join(dirname, f'PROGRAMS\\2023_pa345_student_data\\PA4-{args.choose_set}-{args.input_type}') 
-    choose_set = 'A'
+    choose_set = 'F'
     base_path = os.path.join(dirname, f'PROGRAMS\\2023_pa345_student_data\\PA4-{choose_set}-Debug') 
     
     #Prolem4-BodyA.txt - 6 markers on Frame A and 1 tip 
@@ -93,14 +93,16 @@ def main():
     vertices_trans = np.transpose(PA4_vertices)
     triangles_trans = np.transpose(PA4_triangles)
     d_k_formatted = []
-    c_k = []
+    #c_k = []
 
+    # reformat 
     for i in range(len(a_frames_set)):
         d_k_formatted.append(d_k[:,i])
-
     d_k_formatted_array = np.array(d_k_formatted)
-    pt, transformation_matrix = icp.findClosestPoints(vertices_trans, triangles_trans, d_k_formatted)
+
+    c_k, transformation_matrix = icp.findClosestPoints(vertices_trans, triangles_trans, d_k_formatted)
     
+    # reformat
     rows = len(d_k_formatted)
     cols = 3
     two_d_array = np.array(d_k_formatted).reshape((rows, cols))
@@ -127,11 +129,11 @@ def main():
     return 15 distance 
     """
     # distance = icp.calc_difference(c_k, tip_pos)
-    distance = icp.calc_difference(s_k, tip_pos)
+    distance = icp.calc_difference(s_k, c_k)
 
     # format Output
     #output_name = f'PA4-{args.choose_set}-{args.input_type}-Output.txt'
-    output_name = f'PA4-{choose_set}-Debug-Output.txt'
+    output_name = f'PA4-{choose_set}-KD-Debug-Output.txt'
 
     # Initialize the output list
     output = []

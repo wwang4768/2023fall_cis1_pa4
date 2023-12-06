@@ -2,6 +2,7 @@ import numpy as np
 import numpy.linalg as la
 import calibration_library as cal
 import collections
+from scipy.spatial import cKDTree
 
 def find_closest_point(point, vertices, triangles):
     """
@@ -16,7 +17,7 @@ def find_closest_point(point, vertices, triangles):
     minpoint: the closest point to the given point on the surface mesh
     """
     num_triangles = triangles.shape[1]
-    c_ij = np.zeros([3, num_triangles])
+    c_ij = np.zeros([3, num_triangles]) # closest point initialize with zeros 
     S = np.zeros([3, 2])
 
     for i in range(num_triangles):
@@ -87,6 +88,81 @@ def project_on_segment(c, p, q):
 
     return c_star
 
+def find_closest_point_kdtree(point, vertices, triangles):
+    """
+    Find the closest point on the mesh surface defined by vertices and triangles to the given point
+    using a KD-tree for efficient nearest neighbor search.
+
+    Parameters:
+    point: Given one point as a NumPy array.
+    vertices: Coordinates of vertices as a NumPy array.
+    triangles: Indices of vertex coordinates for each triangle as a NumPy array.
+
+    Returns:
+    minpoint: The closest point to the given point on the surface mesh.
+    """
+    # Flatten triangles array to get a list of vertex indices
+    triangle_indices = triangles.flatten()
+    
+    # Reshape vertices array for KD-tree construction
+    tree = cKDTree(vertices.T)
+
+    # Find the index of the closest vertex in the KD-tree
+    closest_vertex = tree.query(point)
+    closest_vertex_index = closest_vertex[1]
+
+    # Find the corresponding triangle
+    triangle_index = np.where(triangle_indices == closest_vertex_index)[0][0] // 3
+
+    # Get the vertices of the found triangle
+    p_index, q_index, r_index = triangles[:, triangle_index]
+    p, q, r = vertices[:, int(p_index)], vertices[:, int(q_index)], vertices[:, int(r_index)]
+
+    # Project the point onto the triangle
+    c_star = project_on_triangle(point, p, q, r)
+
+    return c_star
+
+def project_on_triangle(c, p, q, r):
+    """
+    Project point c onto the triangle defined by vertices p, q, and r.
+
+    Parameters:
+    c: The point to project as a NumPy array.
+    p, q, r: Vertices of the triangle as NumPy arrays.
+
+    Returns:
+    c_star: The projected point on the triangle.
+    """
+    # Compute vectors from p to q and p to r
+    pq = q - p
+    pr = r - p
+
+    # Compute normal vector of the triangle
+    normal = np.cross(pq, pr)
+
+    # Compute vector from p to c
+    pc = c - p
+
+    # Compute the scalar projections onto the triangle edges
+    d = np.dot(pc, pq)
+    e = np.dot(pc, pr)
+
+    # Compute barycentric coordinates
+    det = np.dot(pq, pr)
+    inv_det = 1.0 / det
+    alpha = (e * np.dot(pq, pq) - d * np.dot(pq, pr)) * inv_det
+    beta = (d * np.dot(pr, pr) - e * np.dot(pq, pr)) * inv_det
+
+    # Clamp alpha and beta to lie within the triangle
+    alpha = np.clip(alpha, 0, 1)
+    beta = np.clip(beta, 0, 1)
+
+    # Compute the projected point on the triangle
+    c_star = p + alpha * pq + beta * pr
+
+    return c_star
+
 def calc_difference(c_k_points, d_k_points):
     """
     Calculates the Euclidean distance between corresponding points in two point clouds.
@@ -114,10 +190,9 @@ def transform_tip_positions(tip_positions, frame_transformation):
 
     """
     # for i in range(np.shape(tip_positions.data)[1]):
-
     #     tip_positions.data[:, i] = cal.setRegistration.apply_transformation_single_pt(tip_positions, frame_transformation)
-
     # return tip_positions
+
     transformed_tip_pos = []
     for i in range(len(tip_positions)):
         registration = cal.setRegistration()
@@ -140,19 +215,20 @@ def findClosestPoints(vertices, triangles, startPoints):
     :return: Closest points and registration frame between the bone and the reference body B.
     """
     registrationFrame = np.identity(4) # initial transformation assumption
-    maxIterations = 20
+    iteration = 0 
+    maxIterations = 1
     previousError = collections.deque(maxlen=2) # deque of error
     previousError.append(0)
     registration = cal.setRegistration()
 
 
-    for iteration in range(maxIterations):
+    while iteration < maxIterations:
         transformedPoints = transform_tip_positions(startPoints, registrationFrame)
-        #transformedPoints = cal.setRegistration.apply_transformation_single_pt(startPoints, registrationFrame)
         allClosestPoints = []
 
         for point in transformedPoints:
-            closestPoint = find_closest_point(point, vertices, triangles)
+            # closestPoint = find_closest_point(point, vertices, triangles)
+            closestPoint = find_closest_point_kdtree(point, vertices, triangles)
             allClosestPoints.append(closestPoint)
 
         delta_Frame = registration.calculate_3d_transformation(transformedPoints, np.array(allClosestPoints))
@@ -162,7 +238,7 @@ def findClosestPoints(vertices, triangles, startPoints):
             return np.array(allClosestPoints), newFrame
 
         registrationFrame = newFrame
-
+        iteration += 1
     return np.array(allClosestPoints), registrationFrame
 
 
