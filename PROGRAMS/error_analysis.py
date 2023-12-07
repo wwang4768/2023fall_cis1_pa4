@@ -52,8 +52,8 @@ def main():
     # Read in input dataset
     script_directory = os.path.dirname(__file__)
     dirname = os.path.dirname(script_directory)
-    base_path_output = os.path.join(dirname, f'OUTPUT\\PA3-{args.choose_set}-{args.input_type}-Output.txt')
-    base_path_sample = os.path.join(dirname, f'PROGRAMS\\2023_pa345_student_data\\PA3-{args.choose_set}-{args.input_type}-Output.txt')
+    base_path_output = os.path.join(dirname, f'OUTPUT\\PA4-{args.choose_set}-{args.input_type}-Output.txt')
+    base_path_sample = os.path.join(dirname, f'PROGRAMS\\2023_pa345_student_data\\PA4-{args.choose_set}-{args.input_type}-Output.txt')
     computed_data = read_coordinates(base_path_output)
     target_data = read_coordinates(base_path_sample)
     error = compute_error(computed_data, target_data)

@@ -6,19 +6,19 @@ from distortion_library import *
 import icp_library as icp 
 
 def main(): 
-    # User interface prompt that takes input from user
-    # parser = argparse.ArgumentParser(description='homework_4 input')
-    # parser.add_argument('choose_set', help='The alphabetical index of the data set')
-    # parser.add_argument('input_type', help='The debug or unknown input data to process')
-    # parser.add_argument('search_method', help='The search algorithm to find closest point', default='kd')
-    # args = parser.parse_args()
+    #User interface prompt that takes input from user
+    parser = argparse.ArgumentParser(description='homework_4 input')
+    parser.add_argument('choose_set', help='The alphabetical index of the data set')
+    parser.add_argument('input_type', help='The debug or unknown input data to process')
+    parser.add_argument('search_method', help='The search algorithm to find closest point', default='kd')
+    args = parser.parse_args()
 
     # Read in input dataset
     script_directory = os.path.dirname(__file__)
     dirname = os.path.dirname(script_directory)
-    #base_path = os.path.join(dirname, f'PROGRAMS\\2023_pa345_student_data\\PA4-{args.choose_set}-{args.input_type}') 
-    choose_set = 'F'
-    base_path = os.path.join(dirname, f'PROGRAMS\\2023_pa345_student_data\\PA4-{choose_set}-Debug') 
+    base_path = os.path.join(dirname, f'PROGRAMS\\2023_pa345_student_data\\PA4-{args.choose_set}-{args.input_type}') 
+    # choose_set = 'F'
+    # base_path = os.path.join(dirname, f'PROGRAMS\\2023_pa345_student_data\\PA4-{choose_set}-Debug') 
     
     #Prolem4-BodyA.txt - 6 markers on Frame A and 1 tip 
     PA4_BodyA = os.path.join(dirname, f'PROGRAMS\\2023_pa345_student_data\\Problem4-BodyA.txt')
@@ -101,8 +101,8 @@ def main():
         d_k_formatted.append(d_k[:,i])
     d_k_formatted_array = np.array(d_k_formatted)
 
-    #search_method = f'{args.search_method}'
-    search_method = 'kd'
+    search_method = f'{args.search_method}'
+    #search_method = 'kd'
     c_k, transformation_matrix = icp.findClosestPoints(vertices_trans, triangles_trans, d_k_formatted, search_method)
     
     # reformat
@@ -121,10 +121,11 @@ def main():
     distance = icp.calc_difference(s_k, c_k)
 
     # format Output
-    #output_name = f'PA4-{args.choose_set}-{args.input_type}-Output.txt'
+    output_name = f'PA4-{args.choose_set}-{args.input_type}-Output.txt'
     num_frame = len(SampleReading_frames)
-    output_name = f'PA4-{choose_set}-Debug-Output.txt'
+    #output_name = f'PA4-{choose_set}-Debug-Output.txt'
 
+    print(np.mean(distance))
     # Initialize the output list
     output = []
     for i in range(len(a_frames_set)):
