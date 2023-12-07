@@ -126,7 +126,6 @@ def main():
         sk = np.transpose(s_k[i])
         ck = np.transpose(c_k[i])
         
-
         # initialize a row with a single space, then extend with dk, another single space as a placeholder, and ck
         row = []
         row.append(" ") 

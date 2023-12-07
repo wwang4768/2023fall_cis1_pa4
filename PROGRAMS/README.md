@@ -21,7 +21,7 @@ Terminal Commands:
 To run the driver code, please enter below in the terminal:
 python homework_4.py {choose_set} {input_type} {search_method}
 
-For example, "python .\homework_4.py A Debug" 'kd'
+For example, "python .\homework_4.py A Debug kd"
 
 To run the driver code, please enter below in the terminal:
 python debug_test.py
