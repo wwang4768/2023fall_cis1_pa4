@@ -17,8 +17,6 @@ def main():
     script_directory = os.path.dirname(__file__)
     dirname = os.path.dirname(script_directory)
     base_path = os.path.join(dirname, f'PROGRAMS\\2023_pa345_student_data\\PA4-{args.choose_set}-{args.input_type}') 
-    # choose_set = 'F'
-    # base_path = os.path.join(dirname, f'PROGRAMS\\2023_pa345_student_data\\PA4-{choose_set}-Debug') 
     
     #Prolem4-BodyA.txt - 6 markers on Frame A and 1 tip 
     PA4_BodyA = os.path.join(dirname, f'PROGRAMS\\2023_pa345_student_data\\Problem4-BodyA.txt')
@@ -53,7 +51,7 @@ def main():
 
     d_k = tip point
     """
-    # return 15 tip_position_b (aka d_k points)
+    # return 200 tip_position_b (aka d_k points)
     a_frames_set = []
     b_frames_set = []
 
@@ -85,7 +83,7 @@ def main():
     d_k = np.concatenate(tip_pos, axis=1) # substitude d_k with s_k 
 
     """
-    Step 2 - return 15 closest point to c_k points 
+    Step 2 - return 200 closest point to c_k points 
     
     point = 15_tip_position_b from Step 1 
     vertices = 1568 vertices - need to transpose row = 3 column = 3136
@@ -94,7 +92,6 @@ def main():
     vertices_trans = np.transpose(PA4_vertices)
     triangles_trans = np.transpose(PA4_triangles)
     d_k_formatted = []
-    #c_k = []
 
     # reformat 
     for i in range(len(a_frames_set)):
@@ -102,10 +99,9 @@ def main():
     d_k_formatted_array = np.array(d_k_formatted)
 
     search_method = f'{args.search_method}'
-    #search_method = 'kd'
-    c_k, transformation_matrix = icp.findClosestPoints(vertices_trans, triangles_trans, d_k_formatted, search_method)
+    c_k, transformation_matrix = icp.findClosestPoints(vertices_trans, triangles_trans, d_k_formatted, search_method, maxIterations=20)
     
-    # reformat
+    # apply transformation matrix to d_k to calculate s_k
     rows = len(d_k_formatted)
     cols = 3
     d_k_two_d_array = np.array(d_k_formatted).reshape((rows, cols))
@@ -115,22 +111,18 @@ def main():
     """
     Step 3 
     put in returns from step 1 and step 2 (distance between s_k and c_k)
-    return 15 distance 
+    return 200 distance 
     """
-    # distance = icp.calc_difference(c_k, tip_pos)
     distance = icp.calc_difference(s_k, c_k)
 
     # format Output
     output_name = f'PA4-{args.choose_set}-{args.input_type}-Output.txt'
     num_frame = len(SampleReading_frames)
-    #output_name = f'PA4-{choose_set}-Debug-Output.txt'
 
-    print(np.mean(distance))
     # Initialize the output list
     output = []
     for i in range(len(a_frames_set)):
         # Transpose the data
-        #dk = np.transpose(tip_pos[i])
         sk = np.transpose(s_k[i])
         ck = np.transpose(c_k[i])
         
@@ -138,7 +130,6 @@ def main():
         # initialize a row with a single space, then extend with dk, another single space as a placeholder, and ck
         row = []
         row.append(" ") 
-        #row.extend(dk.ravel())
         row.extend(ck.ravel())
         row.append("    ")
         row.extend(sk.ravel())
@@ -160,12 +151,6 @@ def main():
  
 if __name__ == "__main__":
     main()
-    
-    # v = validate()
-    # file1 = 'pa1_student_data\PA1 Student Data\pa1-debug-g-output1.txt'
-    # file2 = 'OUTPUT\pa1-unknown-g-output.txt'
-    
-    # percentage_differences = v.calculate_error_from_sample(file1, file2, use_reference=0)
-    # print(np.mean(percentage_differences))
+
     
     

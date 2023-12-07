@@ -193,33 +193,5 @@ if __name__ == '__main__':
     unittest.main()
 
 '''
-#Test parsing
-def test_parseMesh(self):
-    input_file = '2023_pa345_student_data\\Problem3Mesh.sur'
-    vertices_num = 1568
 
-    expected_vertices = np.array([-23.786148, -16.420282, -48.229988])
-    expected_triangles = np.array([12, 19, 1])
-
-    vertices_cloud, triangles_cloud = parseMesh(input_file, vertices_num)
-
-    np.testing.assert_equal(vertices_cloud[0], expected_vertices)
-    np.testing.assert_equal(triangles_cloud[0], expected_triangles)
-
-    
-def test_find_closest_point_vertex_kd_on_vertex(self):
-    point = np.array([0.0, 0.0, 0.0])
-
-    result = icp.find_closest_point_vertex_kd(point, self.kdtree, self.vertices, self.triangles)
-
-    expected_result = np.array([0.0, 0.0, 0.0])
-    npt.assert_allclose(result, expected_result, rtol=1e-1)
-
-def test_find_closest_point_vertex_kd_outside_triangle(self):
-    point = np.array([3.0, 3.0, 3.0])
-
-    result = icp.find_closest_point_vertex_kd(point, self.kdtree, self.vertices, self.triangles)
-
-    expected_result = np.array([2.0, 0.0, 0.0])
-    npt.assert_allclose(result, expected_result, rtol=1e-1)
 '''

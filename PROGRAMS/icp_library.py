@@ -120,7 +120,7 @@ def transform_tip_positions(tip_positions, frame_transformation):
         transformed_tip_pos.append(new)
     return transformed_tip_pos
 
-def findClosestPoints(vertices, triangles, startPoints, searchMode):
+def findClosestPoints(vertices, triangles, startPoints, searchMode, maxIterations):
     """
     Finds the registration transformation between a rigid reference body B and the bone using an iterative closest point finding algorithm.
 
@@ -136,7 +136,6 @@ def findClosestPoints(vertices, triangles, startPoints, searchMode):
     """
     registrationFrame = np.identity(4) # initial transformation assumption
     iteration = 0 
-    maxIterations = 20
     previousError = collections.deque(maxlen=2)
     previousError.append(0)
     registration = cal.setRegistration()
@@ -246,10 +245,6 @@ def find_closest_point_vertex_kd(point, kdtree, vertices, triangles):
 
     # Iterate over triangles containing the nearest vertex
     for triangle_index in triangles_containing_vertex:
-        # check if out of bound
-        # s = vertices.shape[1]
-        # if triangle_index >= s:
-        #     continue
 
         r_vertex_index, p_vertex_index, q_vertex_index = triangles[:, triangle_index]
         r_coor = vertices[:, int(r_vertex_index)]
