@@ -36,7 +36,7 @@ def main():
     SampleReading_point_cloud = parseData(SampleReading)
 
     # update number of frames
-    SampleReading_frames = parseFrame(SampleReading_point_cloud, 6+6+4) # 15 frames of 16 points, ignore last 4 for PA4
+    SampleReading_frames = parseFrame(SampleReading_point_cloud, 6+6+4) # 200 frames of 16 points, ignore last 4 for PA4
 
     registration = setRegistration()
     np.set_printoptions(formatter={'float': '{:.2f}'.format})
@@ -45,7 +45,7 @@ def main():
     Step 1 - find tip position in relation to Frame B 
     
     find_tip_positions()
-    a_frames / b_frames = 15 frames * 6 points - 1 set 
+    a_frames / b_frames = 200 frames * 6 points - 1 set (75 frames for dataset A)
     led_a / led_b = PA4_BodyA first 6 points 
     tip_a = PA4_Body last point
 
@@ -83,9 +83,9 @@ def main():
     d_k = np.concatenate(tip_pos, axis=1) # substitude d_k with s_k 
 
     """
-    Step 2 - return 200 closest point to c_k points 
+    Step 2 - return 200 closest point to c_k points  (75 for dataset A)
     
-    point = 15_tip_position_b from Step 1 
+    point = 200_tip_position_b from Step 1 
     vertices = 1568 vertices - need to transpose row = 3 column = 3136
     triangles = 3135 triangles' vertices index - need to transpose row = 3 column = 3136
     """
@@ -111,7 +111,7 @@ def main():
     """
     Step 3 
     put in returns from step 1 and step 2 (distance between s_k and c_k)
-    return 200 distance 
+    return 200 distance (75 for dataset A)
     """
     distance = icp.calc_difference(s_k, c_k)
 

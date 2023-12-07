@@ -95,6 +95,7 @@ def calc_difference(point_set_a, point_set_b):
     Parameters:
     point_set_a: point cloud a 
     point_set_b: point cloud b 
+
     Returns: 
     1D array with distances between each pair of corresponding points.
     """
@@ -107,10 +108,13 @@ def calc_difference(point_set_a, point_set_b):
 def transform_tip_positions(tip_positions, frame_transformation):
     """
     Transforms tip positions with the given frame transformation. The func. will be useful in PA#4, In PA#3 we assume F_reg is I.
-    param tip_positions: Array containing positions of tip with respect to rigid body B
-    param frame_transformation: Frame transformation
+    
+    Parameters:
+    tip_positions: Array containing positions of tip with respect to rigid body B
+    frame_transformation: Frame transformation
 
-    return: transformed_tip_positions: Transformed array of points
+    Returns: 
+    transformed_tip_positions: Transformed array of points
 
     """
     transformed_tip_pos = []
@@ -122,17 +126,24 @@ def transform_tip_positions(tip_positions, frame_transformation):
 
 def findClosestPoints(vertices, triangles, startPoints, searchMode, maxIterations):
     """
-    Finds the registration transformation between a rigid reference body B and the bone using an iterative closest point finding algorithm.
+    Finds the closest points on a 3D mesh to a set of starting points and computes the registration frame using an iterative closest point algorithm.
 
-    :param vertices: Vertex coordinates of the mesh.
-    :param triangles: Indices of vertices for each mesh triangle.
-    :param startPoints: Positions of the rigid body's tip of rigid body A in reference B coordinates.
+    Parameters:
+    vertices: 3D coordinates of the mesh vertices.
+    triangles: Indices of the vertices that form each triangle of the mesh.
+    startPoints: 3D coordinates of the points from which the closest points on the mesh are to be found.
+    searchMode: The mode of search to be used, either 'kd' for k-d tree or any other string for a linear search.
+    maxIterations: The maximum number of iterations to perform in the ICP algorithm.
 
-    :type vertices: np.array of np.float64, shape (3, N)
-    :type triangles: np.array of np.float64, shape (3, M)
-    :type startPoints: pc.PointCloud
+        :type vertices: np.array, shape (3, N), where N is the number of vertices.
+        :type triangles: np.array of int, shape (3, M), where M is the number of triangles.
+        :type startPoints: np.array, shape (3, P), where P is the number of starting points.
+        :type searchMode: str
+        :type maxIterations: int`
 
-    :return: Closest points and registration frame between the bone and the reference body B.
+    Returns: 
+    A tuple containing the array of closest points on the mesh and the final registration frame matrix.
+        :type: (np.array of np float with shape (4, 4))
     """
     registrationFrame = np.identity(4) # initial transformation assumption
     iteration = 0 
@@ -173,18 +184,19 @@ def hasConverged(tolerance, oldFrame, newFrame, errorHistory):
     """
     Determines if the frame transformation is within a specified tolerance.
 
-    :param tolerance: Tolerance threshold for sum of squared differences.
-    :param oldFrame: Previous frame transformation.
-    :param newFrame: Current frame transformation.
-    :param errorHistory: History of previous errors to assess convergence.
+    Parameters:
+    tolerance: Tolerance threshold for sum of squared differences.
+    oldFrame: Previous frame transformation.
+    newFrame: Current frame transformation.
+    errorHistory: History of previous errors to assess convergence.
 
-    :type tolerance: float
-    :type oldFrame: 4x4 matrix
-    :type newFrame: 4x4 matrix
-    :type errorHistory: collections.deque
+        :type tolerance: float
+        :type oldFrame: 4x4 matrix
+        :type newFrame: 4x4 matrix
+        :type errorHistory: collections.deque
 
-    :return: Whether the difference is within the tolerance or not.
-    :rtype: bool
+    Returns:
+    Bool: Whether the difference is within the tolerance or not.
     """
     error = sum((oldFrame[:3, 3][i] - newFrame[:3, 3][i]) ** 2 +
                 sum((oldFrame[:3, :3][i][j] - newFrame[:3, :3][i][j]) ** 2 for j in range(3))
@@ -207,7 +219,9 @@ def find_closest_point_kd(point, r, p, q):
     Returns:
     minpoint: the closest point to the given point on the surface mesh
     """
-    c_ij = np.zeros([3, 1]) # closest point initialize with zeros 
+    #c_ij = np.zeros([3, 1])
+    c_star = np.zeros([3, 1]) # closest point initialize with zeros 
+
     S = np.zeros([3, 2])
 
     for j in range(3):
@@ -232,18 +246,35 @@ def find_closest_point_kd(point, r, p, q):
     return c_star
 
 def find_closest_point_vertex_kd(point, kdtree, vertices, triangles):
-    # Query the k-d tree for the nearest vertex
+    """
+    Finds the closest point on a mesh to a given point using a k-d tree for initial vertex proximity and subsequent triangle refinement.
+
+    Parameters:
+    point: The 3D coordinates of the point from which the closest point on the mesh is sought.
+    kdtree: A k-d tree data structure containing the mesh vertices, used to quickly find the nearest vertex to the given point.
+    vertices: A 2D array of the mesh's vertices, where each column represents the x, y, z coordinates of a vertex.
+    triangles: A 2D array representing the mesh's triangles, where each column has three indices that correspond to the vertices forming that triangle.
+
+        :type point: np.array with shape (3,)
+        :type kdtree: scipy.spatial.KDTree
+        :type vertices: np.array with shape (3, N), N being the number of vertices
+        :type triangles: np.array with shape (3, M), M being the number of triangles
+
+    Returns:
+    The coordinates of the closest point on the mesh to the given point.
+    """
+    # kd tree for the nearest vertex
     distances, indices = kdtree.query(point, k=1)
     nearest_vertex_index = indices
     nearest_vertex = vertices[:, nearest_vertex_index]
 
-    # Find triangles containing the nearest vertex
+    # find triangles containing the nearest vertex
     triangles_containing_vertex = np.where(np.any(triangles == nearest_vertex_index, axis=0))[0]
 
     min_distance = float('inf')
     closest_point = None
 
-    # Iterate over triangles containing the nearest vertex
+    # iterate over triangles containing the nearest vertex
     for triangle_index in triangles_containing_vertex:
 
         r_vertex_index, p_vertex_index, q_vertex_index = triangles[:, triangle_index]
@@ -251,18 +282,17 @@ def find_closest_point_vertex_kd(point, kdtree, vertices, triangles):
         p_coor = vertices[:, int(p_vertex_index)]
         q_coor = vertices[:, int(q_vertex_index)]
 
-        # Find the closest point on the current triangle
+        # find the closest point on the current trianglar mesh
         current_closest_point = find_closest_point_kd(point, r_coor, p_coor, q_coor)
-
         current_distance = np.linalg.norm(point - current_closest_point)
 
-        # Update closest_point if the current distance is smaller
         if current_distance < min_distance:
             min_distance = current_distance
             closest_point = current_closest_point
 
     return closest_point
 
+'''
 class BoundingBox:
     def __init__(self, min_corner, max_corner, triangle_vertex_indices):
         self.min_corner = np.array(min_corner)
@@ -310,5 +340,5 @@ def find_closest_point_bbox(point, kdtree, bounding_boxes, vertices):
     closest_point = find_closest_point_kd(point, r_coor, p_coor, q_coor)
     
     return closest_point
-
+'''
 
