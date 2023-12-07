@@ -10,6 +10,7 @@ def main():
     # parser = argparse.ArgumentParser(description='homework_4 input')
     # parser.add_argument('choose_set', help='The alphabetical index of the data set')
     # parser.add_argument('input_type', help='The debug or unknown input data to process')
+    # parser.add_argument('search_method', help='The search algorithm to find closest point', default='kd')
     # args = parser.parse_args()
 
     # Read in input dataset
@@ -37,7 +38,7 @@ def main():
     SampleReading_point_cloud = parseData(SampleReading)
 
     # update number of frames
-    SampleReading_frames = parseFrame(SampleReading_point_cloud, 6+6+4) # 15 frames of 16 points, ignore last 4 for PA3
+    SampleReading_frames = parseFrame(SampleReading_point_cloud, 6+6+4) # 15 frames of 16 points, ignore last 4 for PA4
 
     registration = setRegistration()
     np.set_printoptions(formatter={'float': '{:.2f}'.format})
@@ -100,28 +101,16 @@ def main():
         d_k_formatted.append(d_k[:,i])
     d_k_formatted_array = np.array(d_k_formatted)
 
-    c_k, transformation_matrix = icp.findClosestPoints(vertices_trans, triangles_trans, d_k_formatted, 'linear')
+    #search_method = f'{args.search_method}'
+    search_method = 'kd'
+    c_k, transformation_matrix = icp.findClosestPoints(vertices_trans, triangles_trans, d_k_formatted, search_method)
     
     # reformat
     rows = len(d_k_formatted)
     cols = 3
-    two_d_array = np.array(d_k_formatted).reshape((rows, cols))
+    d_k_two_d_array = np.array(d_k_formatted).reshape((rows, cols))
     
-    s_k = registration.apply_transformation(two_d_array, transformation_matrix)
-    # # specific for PA4 
-    # for i in range(len(a_frames_set)):
-    #     pt, transformation_matrix = icp.findClosestPoints(vertices_trans, triangles_trans, d_k[:, i])
-    #     two_d = pt[:, np.newaxis]
-    #     c_k.append(two_d)
-    # closest_pt = np.concatenate(c_k, axis=1)
-
-    #apply transformation matrix to d_k to calculate s_k
-
-    # for i in range(len(a_frames_set)):
-    #     pt = icp.find_closest_point(d_k[:, i], vertices_trans, triangles_trans)
-    #     two_d = pt[:, np.newaxis]
-    #     c_k.append(two_d)
-    # closest_pt = np.concatenate(c_k, axis=1)
+    s_k = registration.apply_transformation(d_k_two_d_array, transformation_matrix)
     
     """
     Step 3 
@@ -134,7 +123,7 @@ def main():
     # format Output
     #output_name = f'PA4-{args.choose_set}-{args.input_type}-Output.txt'
     num_frame = len(SampleReading_frames)
-    output_name = f'PA4-{choose_set}-Debug-Output_KD.txt'
+    output_name = f'PA4-{choose_set}-Debug-Output.txt'
 
     # Initialize the output list
     output = []

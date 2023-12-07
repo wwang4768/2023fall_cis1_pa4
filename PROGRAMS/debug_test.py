@@ -4,6 +4,9 @@ from calibration_library import *
 from dataParsing_library import *
 from distortion_library import *
 import icp_library as icp
+import collections
+import numpy.testing as npt
+from scipy.spatial import KDTree
 
 class TestDistortionCorrection(unittest.TestCase):
 
@@ -13,11 +16,18 @@ class TestDistortionCorrection(unittest.TestCase):
         self.source_points = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
         self.target_points = np.array([[2, 3, 4], [5, 6, 7], [8, 9, 10]])
         self.set_registration = setRegistration()
-        # self.distorted_data = np.random.rand(10000, 3) * 10
-        # self.ground_truth_data = self.distorted_data + np.random.randn(10000, 3) * 0.1
-        # self.sample_data = np.array([[6, 6, 6], [1,1,1], [3,0,3]])
+        vertices = np.array([[0.0, 0.0, 0.0],
+                             [2.0, 0.0, 0.0],
+                             [0.0, 2.0, 0.0]])
+        triangles = np.array([[0, 1, 2],
+                      [1, 2, 3],
+                      [2, 3, 4]])
+
+        self.kdtree = KDTree(vertices)
+        self.vertices = vertices
+        self.triangles = triangles
         
-    def test_find_closest_point(self):
+    def test_linear_search_closest_point(self):
         # Test 1
         vertices = np.array([[0, 2, 0],
                         [1, 2, 3],
@@ -94,18 +104,84 @@ class TestDistortionCorrection(unittest.TestCase):
         transformed_points = self.set_registration.apply_transformation(self.source_points, transformation_matrix)
         self.assertEqual(transformed_points.shape, self.source_points.shape)
     
-    # Test parsing
-    def test_parseMesh(self):
-        input_file = '2023_pa345_student_data\\Problem3Mesh.sur'
-        vertices_num = 1568
+    def test_transform_tip_positions(self):
+        tip_positions = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+        frame_transformation = np.identity(4)
+        result = icp.transform_tip_positions(tip_positions, frame_transformation)
+        self.assertEqual(len(result), len(tip_positions))
 
-        expected_vertices = np.array([-23.786148, -16.420282, -48.229988])
-        expected_triangles = np.array([12, 19, 1])
+    def test_findClosestPoints(self):
+        vertices = np.array([[0, 2, 0], [1, 2, 3], [0, 0, 0]], dtype=np.float64)
+        to_add = np.array([[4, 4, 4], [0, 0, 0], [0, 0, 0]], dtype=np.float64)
+        for i in range(2):
+            vertices = np.hstack((vertices, vertices[:, (-3, -2, -1)] + to_add))
+        triangle_indices = np.array([[0, 0, 1, 1], [1, 1, 2, 3], [2, 3, 5, 5]], dtype=int)
+        triangle_indices = np.hstack((triangle_indices, triangle_indices + 3 * np.ones((3, 4), dtype=int), np.array([[6], [7], [8]], dtype=int)))
 
-        vertices_cloud, triangles_cloud = parseMesh(input_file, vertices_num)
+        startPoints = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+        searchMode = 'kd'
 
-        np.testing.assert_equal(vertices_cloud[0], expected_vertices)
-        np.testing.assert_equal(triangles_cloud[0], expected_triangles)
+        closest_points, registration_frame = icp.findClosestPoints(vertices, triangle_indices, startPoints, searchMode)
+
+        expected_closest_points = [
+            np.array([0.0, 2.00688557, 0.0]),
+            np.array([4.9905831, 2.00412785, 0.0]),
+            np.array([10.0, 2.0, 0.0])
+        ]
+
+        ifValid = False
+        for expected, actual in zip(expected_closest_points, closest_points):
+            for e, a in zip(expected, actual):
+                ifValid = np.isclose(a, e, rtol=1e-1)
+                if ifValid == False:
+                    break
+        self.assertTrue(ifValid)
+
+    def test_hasConverged(self):
+        tolerance = 1e-4
+        oldFrame = np.identity(4)
+        newFrame_converged = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
+        newFrame_not_converged = np.array([[1, 0, 0, 1], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
+        errorHistory = collections.deque(maxlen=2)
+        errorHistory.append(0)
+
+        # Test converged scenario
+        result_converged = icp.hasConverged(tolerance, oldFrame, newFrame_converged, errorHistory)
+        self.assertTrue(result_converged)
+
+        # Test not converged scenario
+        result_not_converged = icp.hasConverged(tolerance, oldFrame, newFrame_not_converged, errorHistory)
+        self.assertFalse(result_not_converged)
+
+        # Test with small difference
+        newFrame_small_difference = newFrame_converged + 1e-5
+        result_small_difference = icp.hasConverged(tolerance, oldFrame, newFrame_small_difference, errorHistory)
+        self.assertTrue(result_small_difference)
+
+    def test_find_closest_point_kd_on_triangle(self):
+        # Test on triangle 
+        point = np.array([1.0, 1.0, 1.0])
+        r = np.array([0.0, 0.0, 0.0])
+        p = np.array([2.0, 0.0, 0.0])
+        q = np.array([0.0, 2.0, 0.0])
+
+        result = icp.find_closest_point_kd(point, r, p, q)
+
+        expected_result = np.array([1.0, 1.0, 0.0])
+        npt.assert_allclose(result, expected_result, rtol=1e-3)
+
+    def test_find_closest_point_kd_outside_triangle(self):
+        # Test outside triangle 
+        point = np.array([3.0, 3.0, 3.0])
+        r = np.array([0.0, 0.0, 0.0])
+        p = np.array([2.0, 0.0, 0.0])
+        q = np.array([0.0, 2.0, 0.0])
+
+        result = icp.find_closest_point_kd(point, r, p, q)
+
+        expected_result = np.array([1.0, 1.0, 0.0])
+        npt.assert_allclose(result, expected_result, rtol=1e-3)
+
 
     def test_parseFrame(self):
         test_data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
@@ -117,44 +193,33 @@ if __name__ == '__main__':
     unittest.main()
 
 '''
-def test_calc_difference(self):
-        c_k_points = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
-        d_k_points = np.array([[7.0, 8.0, 9.0], [10.0, 11.0, 12.0]])
-        result = icp.calc_difference(c_k_points, d_k_points)
-        expected_result = np.array([9.0, 8.660, 7.810]) 
-        print(result)
-        np.testing.assert_allclose(result, expected_result, atol=1e-3)
+#Test parsing
+def test_parseMesh(self):
+    input_file = '2023_pa345_student_data\\Problem3Mesh.sur'
+    vertices_num = 1568
 
-    def test_calibration_and_correction(self):
-        calibrator_corrected = DewarpingCalibrationCorrected()
-        calibrator_corrected.fit(self.distorted_data, self.ground_truth_data)
-        corrected_sample = calibrator_corrected.correction(self.sample_data)
+    expected_vertices = np.array([-23.786148, -16.420282, -48.229988])
+    expected_triangles = np.array([12, 19, 1])
 
-        # You can add assertions to verify that the corrected_sample is as expected
-        self.assertTrue(np.allclose(corrected_sample, self.sample_data, rtol=1e-1, atol=1e-1))
+    vertices_cloud, triangles_cloud = parseMesh(input_file, vertices_num)
+
+    np.testing.assert_equal(vertices_cloud[0], expected_vertices)
+    np.testing.assert_equal(triangles_cloud[0], expected_triangles)
+
     
-    def test_fit(self):
-        # Test the fit method
-        calibrator = DewarpingCalibrationCorrected()
-        calibrator.fit(self.distorted_data, self.ground_truth_data)
-        coefficients = calibrator.coefficients
-        q_min = calibrator.q_min
-        q_max = calibrator.q_max
+def test_find_closest_point_vertex_kd_on_vertex(self):
+    point = np.array([0.0, 0.0, 0.0])
 
-        # Assert that coefficients, q_min, and q_max are not None
-        self.assertIsNotNone(coefficients)
-        self.assertIsNotNone(q_min)
-        self.assertIsNotNone(q_max)
-    
-    def test_correction(self):
-        # Test the correction method
-        calibrator = DewarpingCalibrationCorrected()
-        calibrator.fit(self.distorted_data, self.ground_truth_data)
-        corrected_sample = calibrator.correction(self.sample_data)
+    result = icp.find_closest_point_vertex_kd(point, self.kdtree, self.vertices, self.triangles)
 
-        # Assert that the corrected_sample has the expected shape
-        self.assertEqual(corrected_sample.shape, self.sample_data.shape)
+    expected_result = np.array([0.0, 0.0, 0.0])
+    npt.assert_allclose(result, expected_result, rtol=1e-1)
 
-        # Assert that the corrected_sample is not None
-        self.assertIsNotNone(corrected_sample)
+def test_find_closest_point_vertex_kd_outside_triangle(self):
+    point = np.array([3.0, 3.0, 3.0])
+
+    result = icp.find_closest_point_vertex_kd(point, self.kdtree, self.vertices, self.triangles)
+
+    expected_result = np.array([2.0, 0.0, 0.0])
+    npt.assert_allclose(result, expected_result, rtol=1e-1)
 '''

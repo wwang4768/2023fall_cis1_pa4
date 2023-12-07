@@ -9,7 +9,7 @@ dataParsing_library.py: the script that read in input data and parses it into co
 
 distortion_library.py: the script that handles distortion correction based on Berstein polynomials through fitting and other computation, then finally returns the corrected points
 
-icp_library.py: the script that computes the closest point on a 3D mesh surface to a given point through projection to line segment, return the 3D location of the respective vertices of the triangular mesh and evaluates the error between corresponding points in the two point cloud 
+icp_library.py: the script that computes the closest point on a 3D mesh surface to a given point through projection to line segment, return the 3D location of the respective vertices of the triangular mesh and evaluates the error between corresponding points in the two point cloud. Two search methods, linear and KD tree, were implemented  
 
 homework_4.py: the driver code for programming assignment 4, which read in input data from source files stored under "pa345_student_data", performs set registration and finds the closest point (vertex) on the triangular 3D mesh surface to the given pointer tip points, then output the result to a txt file named “PA4-{choose_set}-{input_type}-Output.txt.” Please refer to the report for more details.
 
@@ -19,9 +19,9 @@ error_analysis.py: the script that contains functions that evaluate the error ra
 
 Terminal Commands:
 To run the driver code, please enter below in the terminal:
-python homework_4.py {choose_set} {input_type} 
+python homework_4.py {choose_set} {input_type} {search_method}
 
-For example, "python .\homework_4.py A Debug" 
+For example, "python .\homework_4.py A Debug" 'kd'
 
 To run the driver code, please enter below in the terminal:
 python debug_test.py
