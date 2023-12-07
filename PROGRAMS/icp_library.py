@@ -200,7 +200,7 @@ def transform_tip_positions(tip_positions, frame_transformation):
         transformed_tip_pos.append(new)
     return transformed_tip_pos
 
-def findClosestPoints(vertices, triangles, startPoints):
+def Iterative_frame_find(vertices, triangles, startPoints):
     """
     Finds the registration transformation between a rigid reference body B and the bone using an iterative closest point finding algorithm.
 
