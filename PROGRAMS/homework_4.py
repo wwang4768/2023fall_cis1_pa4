@@ -16,8 +16,8 @@ def main():
     script_directory = os.path.dirname(__file__)
     dirname = os.path.dirname(script_directory)
     #base_path = os.path.join(dirname, f'PROGRAMS\\2023_pa345_student_data\\PA4-{args.choose_set}-{args.input_type}') 
-    choose_set = 'F'
-    base_path = os.path.join(dirname, f'PROGRAMS\\2023_pa345_student_data\\PA4-{choose_set}-Debug') 
+    choose_set = 'K'
+    base_path = os.path.join(dirname, f'PROGRAMS\\2023_pa345_student_data\\PA4-{choose_set}-Unknown') 
     
     #Prolem4-BodyA.txt - 6 markers on Frame A and 1 tip 
     PA4_BodyA = os.path.join(dirname, f'PROGRAMS\\2023_pa345_student_data\\Problem4-BodyA.txt')
@@ -100,7 +100,7 @@ def main():
         d_k_formatted.append(d_k[:,i])
     d_k_formatted_array = np.array(d_k_formatted)
 
-    c_k, transformation_matrix = icp.findClosestPoints(vertices_trans, triangles_trans, d_k_formatted)
+    c_k, transformation_matrix = icp.findClosestPoints(vertices_trans, triangles_trans, d_k_formatted, 'linear')
     
     # reformat
     rows = len(d_k_formatted)
@@ -133,22 +133,24 @@ def main():
 
     # format Output
     #output_name = f'PA4-{args.choose_set}-{args.input_type}-Output.txt'
-    output_name = f'PA4-{choose_set}-KD-Debug-Output.txt'
+    num_frame = len(SampleReading_frames)
+    output_name = f'PA4-{choose_set}-Unknown-Output.txt'
 
     # Initialize the output list
     output = []
     for i in range(len(a_frames_set)):
         # Transpose the data
-        dk = np.transpose(tip_pos[i])
-        #ck = np.transpose(c_k[i])
+        #dk = np.transpose(tip_pos[i])
         sk = np.transpose(s_k[i])
+        ck = np.transpose(c_k[i])
+        
 
         # initialize a row with a single space, then extend with dk, another single space as a placeholder, and ck
         row = []
         row.append(" ") 
-        row.extend(dk.ravel())
+        #row.extend(dk.ravel())
+        row.extend(ck.ravel())
         row.append("    ")
-        # row.extend(ck.ravel())
         row.extend(sk.ravel())
 
         row.append(round(distance[i], 3))
@@ -158,7 +160,7 @@ def main():
 
     # Write to the file
     with open(output_name, "w") as file:
-        file.write(f'200 {output_name} 0\n')
+        file.write(f'{num_frame} {output_name} 0\n')
 
         for row in output:
             formatted_row = ' '.join(

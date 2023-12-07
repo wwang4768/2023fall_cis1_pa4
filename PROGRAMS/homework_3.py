@@ -88,7 +88,7 @@ def main():
     triangles_trans = np.transpose(PA3_triangles)
     c_k = []
     for i in range(len(a_frames_set)):
-        pt = icp.find_closest_point(d_k[:, i], vertices_trans, triangles_trans)
+        pt = icp.linear_search_closest_point(d_k[:, i], vertices_trans, triangles_trans)
         two_d = pt[:, np.newaxis]
         c_k.append(two_d)
     closest_pt = np.concatenate(c_k, axis=1)

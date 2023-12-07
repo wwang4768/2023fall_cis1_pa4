@@ -77,7 +77,7 @@ def testICP_findclosestpoint(tolerance=1e-4):
     print('\nCalculated points:')
     c_calc = np.zeros([np.shape(v_coords)[1],3])
     for i in range(np.shape(s)[1]):
-        c_calc[i, :] = ICP.find_closest_point(s[:, i], v_coords, tri_inds)
+        c_calc[i, :] = ICP.linear_search_closest_point(s[:, i], v_coords, tri_inds)
 
     print(c_calc.T)
     print('\nMatch within tolerance?')
@@ -95,7 +95,7 @@ def testICP_findclosestpoint(tolerance=1e-4):
     print(s)
 
     print('\nCalculated points:')
-    c_calc = ICP.find_closest_point(s, v_coords, tri_inds)
+    c_calc = ICP.linear_search_closest_point(s, v_coords, tri_inds)
     print(c_calc.data)
 
     print('\nMatch within tolerance?')
@@ -136,7 +136,7 @@ def testFindClosestPoint(tolerance=1e-4):
     print(c)
 
     print('Calculated point: c_calc =')
-    c_calc = ICP.find_closest_point(s, v_coords, v_inds)
+    c_calc = ICP.linear_search_closest_point(s, v_coords, v_inds)
     print(c_calc)
 
     print('\nMatch within tolerance?')
@@ -153,7 +153,7 @@ def testFindClosestPoint(tolerance=1e-4):
     print(c)
 
     print('Calculated point: c_calc =')
-    c_calc = ICP.find_closest_point(s, v_coords, v_inds)
+    c_calc = ICP.linear_search_closest_point(s, v_coords, v_inds)
     print(c_calc)
 
     print('\nMatch within tolerance?')
@@ -170,7 +170,7 @@ def testFindClosestPoint(tolerance=1e-4):
     print(c)
 
     print('Calculated point: c_calc =')
-    c_calc = ICP.find_closest_point(s, v_coords, v_inds)
+    c_calc = ICP.linear_search_closest_point(s, v_coords, v_inds)
     print(c_calc)
 
     print('\nMatch within tolerance?')
@@ -187,7 +187,7 @@ def testFindClosestPoint(tolerance=1e-4):
     print(c)
 
     print('Calculated point: c_calc =')
-    c_calc = ICP.find_closest_point(s, v_coords, v_inds)
+    c_calc = ICP.linear_search_closest_point(s, v_coords, v_inds)
     print(c_calc)
 
     print('\nMatch within tolerance?')

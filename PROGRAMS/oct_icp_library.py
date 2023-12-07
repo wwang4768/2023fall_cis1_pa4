@@ -4,7 +4,7 @@ import calibration_library as cal
 import collections
 from scipy.spatial import KDTree, cKDTree
 
-def linear_search_closest_point(point, vertices, triangles):
+def find_closest_point(point, vertices, triangles):
     """
     Find the closest point on the mesh surface defined by vertices and triangles to the given point.
     
@@ -125,7 +125,7 @@ def transform_tip_positions(tip_positions, frame_transformation):
         transformed_tip_pos.append(new)
     return transformed_tip_pos
 
-def findClosestPoints(vertices, triangles, startPoints, searchMode):
+def findClosestPoints(vertices, triangles, startPoints):
     """
     Finds the registration transformation between a rigid reference body B and the bone using an iterative closest point finding algorithm.
 
@@ -145,24 +145,24 @@ def findClosestPoints(vertices, triangles, startPoints, searchMode):
     previousError = collections.deque(maxlen=2) # deque of error
     previousError.append(0)
     registration = cal.setRegistration()
-    bounding_boxes = construct_bounding_boxes(vertices, triangles)
-    # root = center of all spheres, leaf = actual sphere  
-    box_centers = [(box.min_corner + box.max_corner) / 2 for box in bounding_boxes]
-    kdtree = KDTree(box_centers)
-
-    # kdtree
-    vertex_list = [vertices[:, i] for i in range(vertices.shape[1])]
-    kdtree = KDTree(vertex_list)
 
     while iteration < maxIterations:
         transformedPoints = transform_tip_positions(startPoints, registrationFrame)
         allClosestPoints = []
 
         for point in transformedPoints:
-            closestPoint = linear_search_closest_point(point, vertices, triangles)
+            # closestPoint = find_closest_point(point, vertices, triangles)
             # Assuming bounding_boxes is a list of BoundingBox objects
-            #closestPoint = find_closest_point_bbox(point, kdtree, bounding_boxes, vertices)
-            allClosestPoints.append(closestPoint)
+            bounding_boxes = construct_bounding_boxes(vertices, triangles)
+
+
+            box_centers = [(box.min_corner + box.max_corner) / 2 for box in bounding_boxes]
+            octree = BoundingBoxTreeNode(bounding_boxes, box_centers, size=1, min_count=1, min_diag=0.1)
+
+            bound = float('inf')
+            closest_point = np.zeros(3)
+            find_closest_point_octree(octree, point, bound, closest_point)
+            allClosestPoints.append(closest_point)
 
         delta_Frame = registration.calculate_3d_transformation(transformedPoints, np.array(allClosestPoints))
         newFrame = np.matmul(delta_Frame, registrationFrame)
@@ -202,37 +202,6 @@ def hasConverged(tolerance, oldFrame, newFrame, errorHistory):
     errorHistory.append(error)
     return False
 
-
-class BoundingBox:
-    def __init__(self, min_corner, max_corner, triangle_vertex_indices):
-        self.min_corner = np.array(min_corner)
-        self.max_corner = np.array(max_corner)
-        self.triangle = triangle_vertex_indices  # The triangle or object reference
-
-    def contains_point(self, point):
-        return np.all(point >= self.min_corner) and np.all(point <= self.max_corner)
-    
-# def construct_bounding_boxes(vertices, triangles):
-#     bounding_boxes = []
-#     flat_triangles = triangles.flatten()
-#     num_tri = len(triangles[0])
-#     num_flat = len(flat_triangles)
-#     i = 0
-
-#     while i < num_tri:
-#         triangle_indices = flat_triangles[i,i+num_tri,i+num_tri+num_tri]
-#         # Get the vertices of the triangle
-#         triangle_vertices = vertices[triangle_indices]
-
-#         # Compute the axis-aligned bounding box
-#         min_corner = np.min(triangle_vertices, axis=0)
-#         max_corner = np.max(triangle_vertices, axis=0)
-
-#         # Create a BoundingBox object and add it to the list
-#         bounding_box = BoundingBox(min_corner, max_corner, triangle_indices)
-#         bounding_boxes.append(bounding_box)
-#         i += 1
-#     return bounding_boxes
 
 def construct_bounding_boxes(vertices, triangles):
     bounding_boxes = []
@@ -308,67 +277,66 @@ def find_closest_point_kd(point, r, p, q):
 
     return c_star
 
+class BoundingBox:
+    def __init__(self, min_corner, max_corner, triangle_index=None):
+        self.min_corner = np.array(min_corner)
+        self.max_corner = np.array(max_corner)
+        self.triangle_index = triangle_index
 
-# def find_closest_point_bbox(point, kdtree, bounding_boxes, vertices):
-#     # Query the k-d tree for the nearest bounding box
-#     distances, indices = kdtree.query(point, k=1)
-#     nearest_box = bounding_boxes[indices]
+    def may_be_in_bounds(self, lb, ub):
+        return np.all(ub >= self.min_corner) and np.all(lb <= self.max_corner)
 
-#     # Check the triangle within the nearest bounding box
-#     triangle_indices = nearest_box.triangle
-#     r_vertex_index = triangle_indices[0]
-#     p_vertex_index = triangle_indices[1]
-#     q_vertex_index = triangle_indices[2]
+    def closest_point_to(self, v):
+        # In this simple example, the center of the bounding box is considered the closest point
+        return (self.min_corner + self.max_corner) / 2
 
-#     r_coor = vertices[:, r_vertex_index]
-#     p_coor = vertices[:, p_vertex_index]
-#     q_coor = vertices[:, q_vertex_index]
+class BoundingBoxTreeNode:
+    def __init__(self, bounding_boxes, center, size, min_count, min_diag):
+        self.bounding_boxes = bounding_boxes
+        self.center = center
+        self.size = size
+        self.min_count = min_count
+        self.min_diag = min_diag
+        self.have_subtrees = False
+        self.subtrees = [None] * 8
+        self.construct_subtrees()
 
-#     ver = []
-#     ver.append(r_coor)
-#     ver.append(p_coor)
-#     ver.append(q_coor)
+    def construct_subtrees(self):
+        if len(self.bounding_boxes) <= self.min_count or self.size <= self.min_diag:
+            self.have_subtrees = False
+            return
 
-#     closest_point = find_closest_point_kd(point, ver, triangle_indices)
-    
-#     return closest_point
+        self.have_subtrees = True
+        self.subtrees = [None] * 8
 
-# def find_closest_point_kd(point, vertices, triangle):
-#     """
-#     Find the closest point on the mesh surface defined by vertices and triangles to the given point.
-    
-#     Parameters:
-#     point: Given one point as a NumPy array.
-#     vertices: Coordinates of vertices as a NumPy array.
-#     triangles: Indices of vertex coordinates for each triangle as a NumPy array.
+        for i in range(8):
+            dx, dy, dz = [(i >> bit) & 1 for bit in range(2, -1, -1)]
+            octant_centers = self.center + np.array([dx, dy, dz]) * self.size / 4.0
+            lb = self.center + np.array([dx, dy, dz]) * self.size / 4.0
+            ub = self.center + np.array([dx + 1, dy + 1, dz + 1]) * self.size / 4.0
+            subtree_bounding_boxes = [box for box in self.bounding_boxes if box.may_be_in_bounds(lb, ub)]
+            self.subtrees[i] = BoundingBoxTreeNode(subtree_bounding_boxes, octant_centers, self.size / 2.0, self.min_count, self.min_diag)
 
-#     Returns:
-#     minpoint: the closest point to the given point on the surface mesh
-#     """
-#     r = vertices[0]
-#     p = vertices[1]
-#     q = vertices[2]
-    
-#     c_ij = np.zeros([3, 1]) # closest point initialize with zeros 
-#     S = np.zeros([3, 2])
+def find_closest_point_octree(octree, point, bound, closest_point):
+    if not octree.have_subtrees:
+        for box in octree.bounding_boxes:
+            update_closest(box, point, bound, closest_point)
+    else:
+        octant_index = find_octant_index(octree.center, point)
+        find_closest_point_octree(octree.subtrees[octant_index], point, bound, closest_point)
 
-#     for j in range(3):
-#             S[j][0] = q[j] - p[j]
-#             S[j][1] = r[j] - p[j]
-#     b = point - p
-#     soln = la.lstsq(S, b, rcond=None)
-#     l = soln[0][0]
-#     m = soln[0][1]
+def find_octant_index(center, point):
+    index = 0
+    for i in range(len(center)):
+        if point > center[i]:
+            index |= (1 << i)
+    return index
 
-#     mid = p + l * (q - p) + m * (r - p)
-
-#     if l >= 0 and m >= 0 and l + m <= 1:
-#         c_star = mid
-#     elif l < 0:
-#         c_star = project_on_segment(mid , r, p)
-#     elif m < 0:
-#         c_star = project_on_segment(mid , p, q)
-#     else:  # l + m > 1
-#         c_star = project_on_segment(mid , q, r)
-
-#     return c_star
+def update_closest(box, v, bound, closest_point):
+    cp = box.closest_point_to(v)
+    dist = np.linalg.norm(cp - v)
+    if dist < bound:
+        bound = dist
+        closest_point[:] = cp
+        # if box.triangle_index is not None:
+            #print("Closest triangle index:", box.triangle_index)

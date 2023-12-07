@@ -35,7 +35,7 @@ class TestDistortionCorrection(unittest.TestCase):
         s[-1, :] += 4
         c_calc = np.zeros([np.shape(vertices)[1],3])
         for i in range(np.shape(s)[1]):
-            c_calc[i, :] = icp.find_closest_point(s[:, i], vertices, triangle_indices)
+            c_calc[i, :] = icp.linear_search_closest_point(s[:, i], vertices, triangle_indices)
         assert np.all(np.abs(vertices - c_calc.T) <= 1e-3)
 
         # Test 2
@@ -49,25 +49,25 @@ class TestDistortionCorrection(unittest.TestCase):
         # Case 1 - point in triangle, not in plane
         s = np.array([2, 2, 2])
         c_2 = np.array([2, 2, 0])
-        c_calc = icp.find_closest_point(s, vertices, vertices_index)
+        c_calc = icp.linear_search_closest_point(s, vertices, vertices_index)
         assert np.all(np.abs(c_2 - c_calc) <= 1e-3)
 
         # Case 2 - point not in triangle, not in plane
         s = np.array([5, 2, 6])
         c_3 = np.array([4, 2, 0])
-        c_calc = icp.find_closest_point(s, vertices, vertices_index)
+        c_calc = icp.linear_search_closest_point(s, vertices, vertices_index)
         assert np.all(np.abs(c_3 - c_calc) <= 1e-3)
 
         # Case 3 - point in triangle, not in plane
         s = np.array([2.5, 2, 0])
         c_3 = np.array([2.5, 2, 0])
-        c_calc = icp.find_closest_point(s, vertices, vertices_index)
+        c_calc = icp.linear_search_closest_point(s, vertices, vertices_index)
         assert np.all(np.abs(c_3 - c_calc) <= 1e-3)
 
         # Case 4 - point not in triangle, in plane
         s = np.array([-2, 1.5, 0])
         c_4 = np.array([0, 1.5, 0])
-        c_calc = icp.find_closest_point(s, vertices, vertices_index)
+        c_calc = icp.linear_search_closest_point(s, vertices, vertices_index)
         assert np.all(np.abs(c_4 - c_calc) <= 1e-3)
 
     def test_project_on_segment(self):
