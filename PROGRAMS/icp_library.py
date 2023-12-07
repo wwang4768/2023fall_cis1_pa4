@@ -141,7 +141,7 @@ def findClosestPoints(vertices, triangles, startPoints, searchMode):
     """
     registrationFrame = np.identity(4) # initial transformation assumption
     iteration = 0 
-    maxIterations = 4
+    maxIterations = 20
     previousError = collections.deque(maxlen=2) # deque of error
     previousError.append(0)
     registration = cal.setRegistration()
@@ -159,9 +159,10 @@ def findClosestPoints(vertices, triangles, startPoints, searchMode):
         allClosestPoints = []
 
         for point in transformedPoints:
-            closestPoint = linear_search_closest_point(point, vertices, triangles)
+            #closestPoint = linear_search_closest_point(point, vertices, triangles)
             # Assuming bounding_boxes is a list of BoundingBox objects
             #closestPoint = find_closest_point_bbox(point, kdtree, bounding_boxes, vertices)
+            closestPoint = find_closest_point_vertex_kd(point, kdtree, vertices, triangles)
             allClosestPoints.append(closestPoint)
 
         delta_Frame = registration.calculate_3d_transformation(transformedPoints, np.array(allClosestPoints))
@@ -307,6 +308,38 @@ def find_closest_point_kd(point, r, p, q):
         c_star = project_on_segment(mid , q, r)
 
     return c_star
+
+def find_closest_point_vertex_kd(point, kdtree, vertices, triangles):
+    # Query the k-d tree for the nearest vertex
+    distances, indices = kdtree.query(point, k=1)
+    nearest_vertex_index = indices
+    nearest_vertex = vertices[:, nearest_vertex_index]
+
+    # Find triangles containing the nearest vertex
+    triangles_containing_vertex = np.where(np.any(triangles == nearest_vertex_index, axis=0))[0]
+
+    min_distance = float('inf')
+    closest_point = None
+
+    # Iterate over triangles containing the nearest vertex
+    for triangle_index in triangles_containing_vertex:
+        # vertices of the current triangle
+        r_vertex_index, p_vertex_index, q_vertex_index = triangles[:, triangle_index]
+        r_coor = vertices[:, int(r_vertex_index)]
+        p_coor = vertices[:, int(p_vertex_index)]
+        q_coor = vertices[:, int(q_vertex_index)]
+
+        # Find the closest point on the current triangle
+        current_closest_point = find_closest_point_kd(point, r_coor, p_coor, q_coor)
+
+        current_distance = np.linalg.norm(point - current_closest_point)
+
+        # Update closest_point if the current distance is smaller
+        if current_distance < min_distance:
+            min_distance = current_distance
+            closest_point = current_closest_point
+
+    return closest_point
 
 
 # def find_closest_point_bbox(point, kdtree, bounding_boxes, vertices):

@@ -16,8 +16,8 @@ def main():
     script_directory = os.path.dirname(__file__)
     dirname = os.path.dirname(script_directory)
     #base_path = os.path.join(dirname, f'PROGRAMS\\2023_pa345_student_data\\PA4-{args.choose_set}-{args.input_type}') 
-    choose_set = 'K'
-    base_path = os.path.join(dirname, f'PROGRAMS\\2023_pa345_student_data\\PA4-{choose_set}-Unknown') 
+    choose_set = 'F'
+    base_path = os.path.join(dirname, f'PROGRAMS\\2023_pa345_student_data\\PA4-{choose_set}-Debug') 
     
     #Prolem4-BodyA.txt - 6 markers on Frame A and 1 tip 
     PA4_BodyA = os.path.join(dirname, f'PROGRAMS\\2023_pa345_student_data\\Problem4-BodyA.txt')
@@ -134,7 +134,7 @@ def main():
     # format Output
     #output_name = f'PA4-{args.choose_set}-{args.input_type}-Output.txt'
     num_frame = len(SampleReading_frames)
-    output_name = f'PA4-{choose_set}-Unknown-Output.txt'
+    output_name = f'PA4-{choose_set}-Debug-Output_KD.txt'
 
     # Initialize the output list
     output = []
